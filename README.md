@@ -20,5 +20,4 @@ Strength exercises (weight, sets, reps)
 Bodyweight movements  
 Squadron PT events
 
-Outcome:  
-After introducing the app, participation increased noticeably because people could see their stats and compare themselves on the leaderboard. It also removed the need for spreadsheets entirely.
+To run project: run 'python app.py' then open http://127.0.0.1:5000/ on browser
