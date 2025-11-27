@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-5">
+  <h2>Dashboard</h2>
+  <p>Hello, {{ username or "user" }} — this is a simple dashboard placeholder.</p>
+
+  {% if recent_workouts %}
+    <h4>Recent workouts</h4>
+    <ul>
+      {% for w in recent_workouts %}
+        <li>{{ w['exercise_type'] }} — {{ w['date'] }}</li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>No workouts yet.</p>
+  {% endif %}
+</div>
+{% endblock %}
