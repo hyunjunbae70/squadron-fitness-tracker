@@ -1,0 +1,46 @@
+/* Smooth scrolling and performance optimizations */
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  overflow-x: hidden;
+  /* Prevent horizontal scroll issues */
+}
+
+/* Chart container optimizations to prevent layout shifts */
+.card canvas {
+  max-width: 100%;
+  height: auto !important;
+  display: block;
+  /* Hardware acceleration for smoother rendering */
+  transform: translateZ(0);
+  will-change: auto;
+}
+
+/* Chart wrapper to prevent reflows */
+.chart-container {
+  position: relative;
+  height: 200px;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* Prevent layout shifts during scroll */
+.card {
+  contain: layout style paint;
+}
+
+/* Optimize list rendering */
+.list-group {
+  contain: layout style;
+}
+
+/* Smooth transitions */
+* {
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+

@@ -65,5 +65,39 @@
       </div>
     </div>
   </div>
+
+  <div class="row g-4 mt-1">
+    <div class="col-lg-6">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h4 class="card-title">Workouts This Week</h4>
+          <div class="chart-container">
+            <canvas id="workoutsByDayChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h4 class="card-title">Workouts by Type</h4>
+          <div class="chart-container">
+            <canvas id="workoutsByTypeChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
+
+<script>
+  window.dashboardChartData = {
+    weekLabels: {{ chart_week_labels|default([])|tojson }},
+    weekValues: {{ chart_week_values|default([])|tojson }},
+    typeLabels: {{ chart_type_labels|default([])|tojson }},
+    typeValues: {{ chart_type_values|default([])|tojson }},
+  };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
 {% endblock %}

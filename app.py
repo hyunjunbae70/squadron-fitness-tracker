@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 import sqlite3
 from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 
 app = Flask(__name__)
@@ -166,12 +166,52 @@ def dashboard():
         (user_id,),
     )
     recent = c.fetchall()
+
+    today = datetime.utcnow().date()
+    last_seven_days = [today - timedelta(days=i) for i in range(6, -1, -1)]
+    start_date = last_seven_days[0].isoformat()
+
+    c.execute(
+        """
+        SELECT date, COUNT(*) AS total
+        FROM workouts
+        WHERE user_id = ? AND date >= ?
+        GROUP BY date
+        """,
+        (user_id, start_date),
+    )
+    rows_by_day = c.fetchall()
+    per_day_map = {row["date"]: row["total"] for row in rows_by_day if row["date"]}
+
+    week_labels = [day.strftime("%b %d") for day in last_seven_days]
+    week_values = [per_day_map.get(day.isoformat(), 0) for day in last_seven_days]
+
+    c.execute(
+        """
+        SELECT exercise_type, COUNT(*) AS total
+        FROM workouts
+        WHERE user_id = ?
+        GROUP BY exercise_type
+        """,
+        (user_id,),
+    )
+    rows_by_type = c.fetchall()
+    type_labels = [
+        row["exercise_type"] if row["exercise_type"] else "Unspecified"
+        for row in rows_by_type
+    ]
+    type_values = [row["total"] for row in rows_by_type]
+
     conn.close()
 
     return render_template(
         "dashboard.html",
         username=session.get("username"),
         recent_workouts=recent,
+        chart_week_labels=week_labels,
+        chart_week_values=week_values,
+        chart_type_labels=type_labels,
+        chart_type_values=type_values,
     )
 
 
