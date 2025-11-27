@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-5">
+  <h2 class="mb-4">Leaderboard</h2>
+  
+  <!-- View and Metric Selectors -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label fw-bold">Time Period</label>
+          <div class="btn-group w-100" role="group">
+            <a href="{{ url_for('leaderboard', view='all_time', metric=current_metric) }}" 
+               class="btn btn-outline-primary {% if current_view == 'all_time' %}active{% endif %}">
+              All Time
+            </a>
+            <a href="{{ url_for('leaderboard', view='month', metric=current_metric) }}" 
+               class="btn btn-outline-primary {% if current_view == 'month' %}active{% endif %}">
+              This Month
+            </a>
+            <a href="{{ url_for('leaderboard', view='week', metric=current_metric) }}" 
+               class="btn btn-outline-primary {% if current_view == 'week' %}active{% endif %}">
+              This Week
+            </a>
+            <a href="{{ url_for('leaderboard', view='squadron', metric=current_metric) }}" 
+               class="btn btn-outline-primary {% if current_view == 'squadron' %}active{% endif %}">
+              My Squadron
+            </a>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-bold">Ranking Metric</label>
+          <div class="btn-group w-100" role="group">
+            <a href="{{ url_for('leaderboard', view=current_view, metric='workouts') }}" 
+               class="btn btn-outline-success {% if current_metric == 'workouts' %}active{% endif %}">
+              Workouts
+            </a>
+            <a href="{{ url_for('leaderboard', view=current_view, metric='distance') }}" 
+               class="btn btn-outline-success {% if current_metric == 'distance' %}active{% endif %}">
+              Distance
+            </a>
+            <a href="{{ url_for('leaderboard', view=current_view, metric='duration') }}" 
+               class="btn btn-outline-success {% if current_metric == 'duration' %}active{% endif %}">
+              Duration
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- User's Position Card -->
+  {% if user_position %}
+  <div class="alert alert-info mb-4">
+    <strong>Your Position:</strong> #{{ user_position }} with {{ user_score }} 
+    {% if current_metric == 'workouts' %}workouts
+    {% elif current_metric == 'distance' %}miles
+    {% elif current_metric == 'duration' %}minutes
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- Rankings Table -->
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <h4 class="card-title mb-3">{{ metric_label }}</h4>
+      {% if rankings %}
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th style="width: 60px;">Rank</th>
+                <th>User</th>
+                <th>Rank</th>
+                <th>Squadron</th>
+                <th class="text-end">{{ metric_label }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in rankings %}
+              <tr class="{% if row.id == session.user_id %}table-primary{% endif %}">
+                <td>
+                  {% set rank_num = loop.index %}
+                  {% if rank_num == 1 %}
+                    <span class="badge bg-warning text-dark">🥇 1</span>
+                  {% elif rank_num == 2 %}
+                    <span class="badge bg-secondary">🥈 2</span>
+                  {% elif rank_num == 3 %}
+                    <span class="badge bg-warning" style="background-color: #CD7F32 !important;">🥉 3</span>
+                  {% else %}
+                    <strong>#{{ rank_num }}</strong>
+                  {% endif %}
+                </td>
+                <td>
+                  <strong>{{ row.username }}</strong>
+                  {% if row.id == session.user_id %}
+                    <span class="badge bg-primary ms-2">You</span>
+                  {% endif %}
+                </td>
+                <td>{{ row.rank or '-' }}</td>
+                <td>{{ row.squadron or '-' }}</td>
+                <td class="text-end">
+                  <strong>
+                    {% if current_metric == 'distance' %}
+                      {{ "%.2f"|format(row.score) }} mi
+                    {% elif current_metric == 'duration' %}
+                      {{ row.score }} min
+                    {% else %}
+                      {{ row.score }}
+                    {% endif %}
+                  </strong>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="text-center py-5">
+          <p class="text-muted">No workouts found for this period. Be the first to log a workout!</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+

@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 import sqlite3
 from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime, timedelta
+import datetime
 import os
 
 app = Flask(__name__)
@@ -167,9 +167,9 @@ def dashboard():
     )
     recent = c.fetchall()
 
-    today = datetime.utcnow().date()
-    last_seven_days = [today - timedelta(days=i) for i in range(6, -1, -1)]
-    start_date = last_seven_days[0].isoformat()
+    today = datetime.datetime.utcnow()
+    last_seven_days = [today - datetime.timedelta(days=i) for i in range(6, -1, -1)]
+    start_date = last_seven_days[0].date().isoformat()
 
     c.execute(
         """
@@ -272,6 +272,101 @@ def log_workout():
 
     flash("Workout logged!", "success")
     return redirect(url_for("dashboard"))
+
+
+@app.route("/leaderboard")
+@login_required
+def leaderboard():
+    view = request.args.get("view", "all_time")  # all_time, week, month, squadron
+    metric = request.args.get("metric", "workouts")  # workouts, distance, duration
+    
+    conn = get_db()
+    c = conn.cursor()
+    
+    # Determine date filter
+    today = datetime.datetime.utcnow().date()
+    date_param = []
+    join_condition = "LEFT JOIN workouts w ON u.id = w.user_id"
+    
+    if view == "week":
+        start_date = (today - datetime.timedelta(days=7)).isoformat()
+        join_condition += " AND w.date >= ?"
+        date_param.append(start_date)
+    elif view == "month":
+        start_date = (today - datetime.timedelta(days=30)).isoformat()
+        join_condition += " AND w.date >= ?"
+        date_param.append(start_date)
+    
+    # Build query based on metric
+    if metric == "workouts":
+        select_clause = "COUNT(*) AS score"
+        order_by = "score DESC"
+    elif metric == "distance":
+        select_clause = "COALESCE(SUM(w.distance), 0) AS score"
+        order_by = "score DESC"
+    elif metric == "duration":
+        select_clause = "COALESCE(SUM(w.duration), 0) AS score"
+        order_by = "score DESC"
+    else:
+        select_clause = "COUNT(*) AS score"
+        order_by = "score DESC"
+    
+    # Squadron filter
+    where_clause = "WHERE 1=1"
+    if view == "squadron":
+        c.execute("SELECT squadron FROM users WHERE id = ?", (session["user_id"],))
+        user_squadron = c.fetchone()
+        if user_squadron and user_squadron["squadron"]:
+            where_clause += " AND u.squadron = ?"
+            date_param.append(user_squadron["squadron"])
+    
+    query = f"""
+        SELECT 
+            u.id,
+            u.username,
+            u.rank,
+            u.squadron,
+            {select_clause}
+        FROM users u
+        {join_condition}
+        {where_clause}
+        GROUP BY u.id, u.username, u.rank, u.squadron
+        HAVING score > 0
+        ORDER BY {order_by}
+        LIMIT 50
+    """
+    
+    c.execute(query, tuple(date_param) if date_param else ())
+    rankings = c.fetchall()
+    
+    # Get current user's position
+    current_user_id = session.get("user_id")
+    user_position = None
+    user_score = None
+    for idx, row in enumerate(rankings, 1):
+        if row["id"] == current_user_id:
+            user_position = idx
+            user_score = row["score"]
+            break
+    
+    conn.close()
+    
+    # Format metric labels
+    metric_labels = {
+        "workouts": "Total Workouts",
+        "distance": "Total Distance (miles)",
+        "duration": "Total Duration (minutes)"
+    }
+    
+    return render_template(
+        "leaderboard.html",
+        rankings=rankings,
+        current_view=view,
+        current_metric=metric,
+        metric_label=metric_labels.get(metric, "Total Workouts"),
+        user_position=user_position,
+        user_score=user_score,
+    )
 
 
 # -----------------------
