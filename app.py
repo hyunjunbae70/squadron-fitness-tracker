@@ -1,53 +1,183 @@
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 import sqlite3
+from functools import wraps
+from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 import os
 
 app = Flask(__name__)
-app.secret_key = 'your-secret-key-here'  # Change this in production!
+app.secret_key = os.environ.get("FLASK_SECRET", "your-secret-key-here")  # change in production!
 
-# Database setup
+DATABASE = "fitness.db"
+
+# -----------------------
+# Database helpers
+# -----------------------
+def get_db(conn_path=DATABASE):
+    conn = sqlite3.connect(conn_path)
+    conn.row_factory = sqlite3.Row
+    return conn
+
 def init_db():
-    conn = sqlite3.connect('fitness.db')
+    conn = get_db()
     c = conn.cursor()
-    
-    # Users table
-    c.execute('''CREATE TABLE IF NOT EXISTS users
-                 (id INTEGER PRIMARY KEY, 
-                  username TEXT UNIQUE, 
-                  password TEXT,
-                  rank TEXT,
-                  squadron TEXT)''')
-    
+
+    # Users table (store hashed passwords)
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            rank TEXT,
+            squadron TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
     # Workouts table
-    c.execute('''CREATE TABLE IF NOT EXISTS workouts
-                 (id INTEGER PRIMARY KEY,
-                  user_id INTEGER,
-                  exercise_type TEXT,
-                  duration INTEGER,
-                  distance REAL,
-                  reps INTEGER,
-                  weight REAL,
-                  date TEXT,
-                  FOREIGN KEY(user_id) REFERENCES users(id))''')
-    
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS workouts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            exercise_type TEXT,
+            duration INTEGER,
+            distance REAL,
+            reps INTEGER,
+            weight REAL,
+            date TEXT,
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        )
+    ''')
+
     conn.commit()
     conn.close()
 
-@app.route('/')
+# -----------------------
+# Auth utilities
+# -----------------------
+def login_required(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if "user_id" not in session:
+            return redirect(url_for("login"))
+        return f(*args, **kwargs)
+    return wrapper
+
+# -----------------------
+# Routes
+# -----------------------
+@app.route("/")
 def index():
-    if 'user_id' in session:
-        return redirect(url_for('dashboard'))
-    return render_template('index.html')
+    if "user_id" in session:
+        return redirect(url_for("dashboard"))
+    return render_template("index.html")
 
-@app.route('/dashboard')
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if "user_id" in session:
+        return redirect(url_for("dashboard"))
+
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+
+        if not username or not password:
+            flash("Username and password are required.", "warning")
+            return render_template("register.html")
+
+        password_hash = generate_password_hash(password)
+
+        try:
+            conn = get_db()
+            c = conn.cursor()
+            c.execute(
+                "INSERT INTO users (username, password_hash) VALUES (?, ?)",
+                (username, password_hash),
+            )
+            conn.commit()
+            conn.close()
+        except sqlite3.IntegrityError:
+            flash("Username already taken. Choose another one.", "danger")
+            return render_template("register.html")
+
+        flash("Registration successful. Please log in.", "success")
+        return redirect(url_for("login"))
+
+    return render_template("register.html")
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if "user_id" in session:
+        return redirect(url_for("dashboard"))
+
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+
+        if not username or not password:
+            flash("Provide username and password.", "warning")
+            return render_template("login.html")
+
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("SELECT * FROM users WHERE username = ?", (username,))
+        user = c.fetchone()
+        conn.close()
+
+        if user and check_password_hash(user["password_hash"], password):
+            session["user_id"] = user["id"]
+            session["username"] = user["username"]
+            flash("Logged in successfully.", "success")
+            return redirect(url_for("dashboard"))
+        else:
+            flash("Invalid username or password.", "danger")
+            return render_template("login.html")
+
+    return render_template("login.html")
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    flash("You have been logged out.", "info")
+    return redirect(url_for("index"))
+
+
+@app.route("/dashboard")
+@login_required
 def dashboard():
-    if 'user_id' not in session:
-        return redirect(url_for('index'))
-    
-    # Simple dashboard - you can expand this later
-    return render_template('dashboard.html', username=session.get('username'))
+    # Example: fetch a few recent workouts for the logged in user
+    user_id = session.get("user_id")
+    conn = get_db()
+    c = conn.cursor()
+    c.execute(
+        "SELECT * FROM workouts WHERE user_id = ? ORDER BY date(date) DESC LIMIT 10",
+        (user_id,),
+    )
+    recent = c.fetchall()
+    conn.close()
 
-if __name__ == '__main__':
+    return render_template("dashboard.html", username=session.get("username"), recent_workouts=recent)
+
+
+# -----------------------
+# Optional: simple profile route
+# -----------------------
+@app.route("/profile")
+@login_required
+def profile():
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT id, username, rank, squadron, created_at FROM users WHERE id = ?", (session["user_id"],))
+    user = c.fetchone()
+    conn.close()
+    return render_template("profile.html", user=user)
+
+
+# -----------------------
+# App startup
+# -----------------------
+if __name__ == "__main__":
     init_db()
     app.run(debug=True)
