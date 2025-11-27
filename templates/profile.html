@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-5">
+  <h2>Profile</h2>
+  {% if user %}
+    <ul class="list-group mt-3">
+      <li class="list-group-item"><strong>Username:</strong> {{ user.username }}</li>
+      {% if user.rank %}
+        <li class="list-group-item"><strong>Rank:</strong> {{ user.rank }}</li>
+      {% endif %}
+      {% if user.squadron %}
+        <li class="list-group-item"><strong>Squadron:</strong> {{ user.squadron }}</li>
+      {% endif %}
+      <li class="list-group-item"><strong>Member since:</strong> {{ user.created_at }}</li>
+    </ul>
+  {% else %}
+    <p class="text-muted mt-3">Unable to load profile details.</p>
+  {% endif %}
+</div>
+{% endblock %}
+

@@ -2,9 +2,12 @@
 {% block content %}
 <div class="container mt-5">
     <h2>Register</h2>
-    <form method="POST">
-        <input class="form-control mt-3" name="username" placeholder="Username">
-        <input class="form-control mt-3" type="password" name="password" placeholder="Password">
+    <form method="POST" novalidate>
+        <input class="form-control mt-3" name="username" placeholder="Username" required>
+        <input class="form-control mt-3" type="password" name="password" placeholder="Password (min 8 chars)" required minlength="8">
+        <input class="form-control mt-3" type="password" name="confirm_password" placeholder="Confirm Password" required>
+        <input class="form-control mt-3" name="rank" placeholder="Rank (optional)">
+        <input class="form-control mt-3" name="squadron" placeholder="Squadron (optional)">
         <button class="btn btn-success mt-3" type="submit">Register</button>
     </form>
 </div>

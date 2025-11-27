@@ -80,9 +80,20 @@ def register():
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
+        confirm_password = request.form.get("confirm_password", "")
+        rank = request.form.get("rank", "").strip()
+        squadron = request.form.get("squadron", "").strip()
 
         if not username or not password:
             flash("Username and password are required.", "warning")
+            return render_template("register.html")
+
+        if len(password) < 8:
+            flash("Password must be at least 8 characters long.", "warning")
+            return render_template("register.html")
+
+        if password != confirm_password:
+            flash("Passwords do not match.", "warning")
             return render_template("register.html")
 
         password_hash = generate_password_hash(password)
@@ -91,8 +102,8 @@ def register():
             conn = get_db()
             c = conn.cursor()
             c.execute(
-                "INSERT INTO users (username, password_hash) VALUES (?, ?)",
-                (username, password_hash),
+                "INSERT INTO users (username, password_hash, rank, squadron) VALUES (?, ?, ?, ?)",
+                (username, password_hash, rank or None, squadron or None),
             )
             conn.commit()
             conn.close()
@@ -147,7 +158,6 @@ def logout():
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    # Example: fetch a few recent workouts for the logged in user
     user_id = session.get("user_id")
     conn = get_db()
     c = conn.cursor()
@@ -158,7 +168,70 @@ def dashboard():
     recent = c.fetchall()
     conn.close()
 
-    return render_template("dashboard.html", username=session.get("username"), recent_workouts=recent)
+    return render_template(
+        "dashboard.html",
+        username=session.get("username"),
+        recent_workouts=recent,
+    )
+
+
+@app.route("/workouts/log", methods=["POST"])
+@login_required
+def log_workout():
+    exercise_type = request.form.get("exercise_type", "").strip()
+    date_str = request.form.get("date") or ""
+    duration = request.form.get("duration")
+    distance = request.form.get("distance")
+    reps = request.form.get("reps")
+    weight = request.form.get("weight")
+
+    if not exercise_type:
+        flash("Exercise type is required.", "warning")
+        return redirect(url_for("dashboard"))
+
+    if not date_str:
+        date_str = datetime.utcnow().strftime("%Y-%m-%d")
+
+    # Normalize numeric fields, allow blanks to stay NULL
+    def to_int(value):
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return None
+
+    def to_float(value):
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+
+    duration_val = to_int(duration)
+    reps_val = to_int(reps)
+    distance_val = to_float(distance)
+    weight_val = to_float(weight)
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute(
+        """
+        INSERT INTO workouts (user_id, exercise_type, duration, distance, reps, weight, date)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            session["user_id"],
+            exercise_type,
+            duration_val,
+            distance_val,
+            reps_val,
+            weight_val,
+            date_str,
+        ),
+    )
+    conn.commit()
+    conn.close()
+
+    flash("Workout logged!", "success")
+    return redirect(url_for("dashboard"))
 
 
 # -----------------------
@@ -172,7 +245,8 @@ def profile():
     c.execute("SELECT id, username, rank, squadron, created_at FROM users WHERE id = ?", (session["user_id"],))
     user = c.fetchone()
     conn.close()
-    return render_template("profile.html", user=user)
+    user_data = dict(user) if user else None
+    return render_template("profile.html", user=user_data)
 
 
 # -----------------------
