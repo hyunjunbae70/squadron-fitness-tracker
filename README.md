@@ -1,6 +1,6 @@
 # Squadron Fitness Tracker
 
-A full-stack web application designed to track exercise activities for squadron personnel, replacing traditional Excel-based tracking systems with a modern, interactive platform that encourages fitness participation through competitive features and progress visualization.
+A full-stack web application designed to track exercise activities for squadron personnel, replacing traditional Excel-based tracking systems with a modern, interactive platform that encourages fitness participation through competitive features and progress visualization. (Note: this is a rewriting of the original (in Korean) I implemented while in the military)
 
 ## Overview
 
