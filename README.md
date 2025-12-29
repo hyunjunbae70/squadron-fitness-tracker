@@ -1,10 +1,12 @@
 # Squadron Fitness Tracker
 
-A full-stack web application designed to track exercise activities for squadron personnel, replacing traditional Excel-based tracking systems with a modern, interactive platform that encourages fitness participation through competitive features and progress visualization. (Note: this is a rewriting of the original (in Korean) I implemented while in the military)
+A fitness tracking web app I built during military service to replace Excel spreadsheets for squadron PT tracking. Increased participation by 40% through leaderboards and progress charts.
 
-## Overview
+*Note: This is a rewrite of the original Korean version I deployed while serving.*
 
-The Squadron Fitness Tracker is a comprehensive fitness management system that enables military personnel to log workouts, monitor their progress, and engage in friendly competition through team leaderboards. The application successfully increased exercise participation rates by 40% within the squadron through its gamification features and intuitive user interface.
+## What It Does
+
+Tracks workouts for military personnel with competitive leaderboards and progress visualisation. Users log exercises (running, strength training, bodyweight), view their stats over time, and compete on team/individual leaderboards.
 
 ## Features
 
@@ -204,14 +206,3 @@ squadron-fitness-tracker/
 - SQL injection protection through parameterized queries
 - Session-based authentication prevents unauthorized access
 - **Important**: Change the `FLASK_SECRET` environment variable in production environments
-
-## Future Enhancements
-
-Potential improvements for future versions:
-- Export workout data to CSV/PDF
-- Email notifications for workout reminders
-- Integration with fitness wearables
-- Advanced analytics and insights
-- Group challenges and team events
-- Mobile app version
-
